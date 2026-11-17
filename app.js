@@ -1,4 +1,4 @@
-
+document.getElementById("message").textContent = "app.js is running";
 Ticker,Company,Sector,Date,Open,High,Low,Close,Volume,EPS,PE_Ratio,Market_Cap_Mn,Revenue_Growth_Pct,Debt_to_Equity
 TCS,Tata Consultancy Services,IT,2026-01-01,3500,3550,3480,3520,100000,120,25,1200000,12,0.2
 TCS,Tata Consultancy Services,IT,2026-02-01,3520,3600,3500,3580,110000,122,26,1210000,13,0.2
