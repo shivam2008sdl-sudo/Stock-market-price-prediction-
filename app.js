@@ -1,8 +1,193 @@
-document.getElementById("message").textContent = "app.js is running";
-Ticker,Company,Sector,Date,Open,High,Low,Close,Volume,EPS,PE_Ratio,Market_Cap_Mn,Revenue_Growth_Pct,Debt_to_Equity
-TCS,Tata Consultancy Services,IT,2026-01-01,3500,3550,3480,3520,100000,120,25,1200000,12,0.2
-TCS,Tata Consultancy Services,IT,2026-02-01,3520,3600,3500,3580,110000,122,26,1210000,13,0.2
-TCS,Tata Consultancy Services,IT,2026-03-01,3580,3650,3550,3620,120000,124,27,1220000,14,0.2
-INFY,Infosys,IT,2026-01-01,1800,1850,1780,1820,90000,65,28,750000,10,0.3
-INFY,Infosys,IT,2026-02-01,1820,1880,1810,1860,95000,67,29,760000,11,0.3
-INFY,Infosys,IT,2026-03-01,1860,1900,1840,1890,98000,68,30,770000,12,0.3
+
+let stockData = [];
+let stockChart = null;
+
+async function loadDataset() {
+  const message = document.getElementById("message");
+  const select = document.getElementById("stockSelect");
+
+  message.textContent = "Loading stock dataset...";
+
+  try {
+    const response = await fetch("./data.csv");
+
+    if (!response.ok) {
+      throw new Error("data.csv not found: " + response.status);
+    }
+
+    const csvText = await response.text();
+
+    const result = Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: true
+    });
+
+    stockData = result.data.filter(row =>
+      row.Ticker &&
+      row.Company &&
+      Number.isFinite(Number(row.Close)) &&
+      row.Date
+    );
+
+    if (stockData.length === 0) {
+      throw new Error("CSV data is empty or incorrect");
+    }
+
+    const companies = [
+      ...new Map(
+        stockData.map(row => [
+          row.Ticker,
+          { ticker: row.Ticker, company: row.Company }
+        ])
+      ).values()
+    ];
+
+    select.innerHTML = "";
+
+    companies.forEach(company => {
+      const option = document.createElement("option");
+      option.value = company.ticker;
+      option.textContent =
+        company.company + " (" + company.ticker + ")";
+      select.appendChild(option);
+    });
+
+    message.textContent =
+      "Dataset loaded successfully: " + stockData.length + " records";
+
+    analyzeStock();
+
+  } catch (error) {
+    message.textContent = "Error: " + error.message;
+    console.error(error);
+  }
+}
+
+function formatNumber(value) {
+  if (value === null || value === undefined ||
+      !Number.isFinite(Number(value))) return "--";
+
+  return Number(value).toLocaleString("en-IN", {
+    maximumFractionDigits: 2
+  });
+}
+
+function predictNextPrice(records) {
+  const prices = records.map(row => Number(row.Close));
+  const n = prices.length;
+
+  if (n < 2) return null;
+
+  const meanX = (n - 1) / 2;
+  const meanY = prices.reduce((a, b) => a + b, 0) / n;
+
+  let numerator = 0;
+  let denominator = 0;
+
+  for (let i = 0; i < n; i++) {
+    numerator += (i - meanX) * (prices[i] - meanY);
+    denominator += (i - meanX) ** 2;
+  }
+
+  const slope = denominator ? numerator / denominator : 0;
+  const prediction = meanY + slope * (n - 1 - meanX + 1);
+
+  return { price: Math.max(0, prediction), slope };
+}
+
+function analyzeStock() {
+  const ticker = document.getElementById("stockSelect").value;
+
+  const records = stockData
+    .filter(row => row.Ticker === ticker)
+    .sort((a, b) => new Date(a.Date) - new Date(b.Date));
+
+  if (!records.length) return;
+
+  const latest = records[records.length - 1];
+  const prediction = predictNextPrice(records);
+
+  document.getElementById("companyName").textContent = latest.Company;
+  document.getElementById("companySector").textContent = latest.Sector;
+  document.getElementById("currentPrice").textContent = formatNumber(latest.Close);
+  document.getElementById("eps").textContent = formatNumber(latest.EPS);
+  document.getElementById("pe").textContent = formatNumber(latest.PE_Ratio);
+  document.getElementById("marketCap").textContent = formatNumber(latest.Market_Cap_Mn) + " Mn";
+  document.getElementById("revenue").textContent = formatNumber(latest.Revenue_Growth_Pct) + "%";
+  document.getElementById("debt").textContent = formatNumber(latest.Debt_to_Equity);
+  document.getElementById("volume").textContent = formatNumber(latest.Volume);
+
+  if (prediction) {
+    document.getElementById("predictedPrice").textContent = formatNumber(prediction.price);
+    document.getElementById("forecast").textContent = formatNumber(prediction.price);
+
+    document.getElementById("trendText").textContent =
+      "Historical trend: " +
+      (prediction.slope >= 0 ? "Upward" : "Downward");
+  } else {
+    document.getElementById("predictedPrice").textContent = "--";
+    document.getElementById("forecast").textContent = "--";
+    document.getElementById("trendText").textContent =
+      "At least 2 records are needed for prediction.";
+  }
+
+  renderChart(records);
+  renderTable(records);
+}
+
+function renderChart(records) {
+  const canvas = document.getElementById("stockChart");
+
+  if (!canvas || typeof Chart === "undefined") return;
+
+  if (stockChart) stockChart.destroy();
+
+  stockChart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: records.map(row => row.Date),
+      datasets: [{
+        label: "Closing Price",
+        data: records.map(row => Number(row.Close)),
+        borderColor: "#20d6a1",
+        backgroundColor: "rgba(32,214,161,0.10)",
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
+}
+
+function renderTable(records) {
+  const tbody = document.getElementById("stockTable");
+  tbody.innerHTML = "";
+
+  [...records].reverse().forEach(row => {
+    const tr = document.createElement("tr");
+
+    [
+      row.Date, row.Open, row.High,
+      row.Low, row.Close, row.Volume
+    ].forEach(value => {
+      const td = document.createElement("td");
+      td.textContent = value ?? "--";
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById("analyzeBtn")
+  .addEventListener("click", analyzeStock);
+
+document.getElementById("stockSelect")
+  .addEventListener("change", analyzeStock);
+
+loadDataset();
+        
