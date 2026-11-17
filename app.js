@@ -9,7 +9,7 @@ async function loadDataset() {
   message.textContent = "Loading stock dataset...";
 
   try {
-    const response = await fetch("./data.csv");
+  const response = await fetch("./data.csv?v=2");
 
     if (!response.ok) {
       throw new Error("data.csv not found: " + response.status);
