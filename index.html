@@ -159,6 +159,17 @@
 
   </main>
 <p>HTML IS WORKING</p>
-  <script src="./app.js?v=3"></script>
+  <script>
+window.onerror = function(message, source, line) {
+  document.getElementById("message").textContent =
+    "JavaScript Error: " + message + " | Line: " + line;
+};
+</script>
+
+<script
+  src="/Stock-market-price-prediction-/app.js?v=4"
+  onload="document.getElementById('message').textContent='APP JS FILE LOADED';"
+  onerror="document.getElementById('message').textContent='APP JS FILE FAILED TO LOAD';">
+</script>
 </body>
 </html>
