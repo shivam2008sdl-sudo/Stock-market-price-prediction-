@@ -191,3 +191,104 @@ document.getElementById("stockSelect")
 
 loadDataset();
         
+
+/* NIFTY 50 Additional Company Search */
+(async function addNiftyCompanySearch() {
+  const tableBody = document.getElementById("niftyCompanyTable");
+  const searchInput = document.getElementById("niftySearch");
+  const countElement = document.getElementById("niftyCompanyCount");
+
+  if (!tableBody || !searchInput) return;
+
+  try {
+    const response = await fetch("./data.csv?v=3");
+
+    if (!response.ok) {
+      throw new Error("CSV file could not be loaded");
+    }
+
+    const csvText = await response.text();
+
+    const result = Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true
+    });
+
+    const rows = result.data.filter(row =>
+      row.Ticker && row.Company
+    );
+
+    // Keep the latest available row for each ticker
+    const latestCompanies = new Map();
+
+    rows.forEach(row => {
+      const ticker = String(row.Ticker).trim();
+      const previous = latestCompanies.get(ticker);
+
+      if (
+        !previous ||
+        String(row.Date) > String(previous.Date)
+      ) {
+        latestCompanies.set(ticker, row);
+      }
+    });
+
+    const companies = Array.from(latestCompanies.values());
+
+    if (countElement) {
+      countElement.textContent = companies.length;
+    }
+
+    function showCompanies(searchText = "") {
+      const query = searchText.toLowerCase().trim();
+
+      const filtered = companies.filter(row =>
+        String(row.Company).toLowerCase().includes(query) ||
+        String(row.Ticker).toLowerCase().includes(query)
+      );
+
+      tableBody.replaceChildren();
+
+      if (filtered.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 3;
+        td.textContent = "No company found";
+        tr.appendChild(td);
+        tableBody.appendChild(tr);
+        return;
+      }
+
+      filtered.forEach(row => {
+        const tr = document.createElement("tr");
+
+        const companyCell = document.createElement("td");
+        companyCell.textContent = row.Company;
+
+        const tickerCell = document.createElement("td");
+        tickerCell.textContent = row.Ticker;
+
+        const closeCell = document.createElement("td");
+        const close = Number(row.Close);
+
+        closeCell.textContent = Number.isFinite(close)
+          ? close.toFixed(2)
+          : "Data unavailable";
+
+        tr.append(companyCell, tickerCell, closeCell);
+        tableBody.appendChild(tr);
+      });
+    }
+
+    searchInput.addEventListener("input", () => {
+      showCompanies(searchInput.value);
+    });
+
+    showCompanies();
+
+  } catch (error) {
+    console.error("NIFTY company search error:", error);
+    tableBody.innerHTML =
+      '<tr><td colspan="3">Data load nahi ho paya.</td></tr>';
+  }
+})();
