@@ -157,7 +157,57 @@
       <p>Predictions are estimates, not guaranteed future prices or investment advice.</p>
     </footer>
 
-  </main>
+  
+<!-- NIFTY 50 Additional Features -->
+<section class="panel nifty-panel">
+  <h2>NIFTY 50 Market Overview</h2>
+  <p>Track companies included in the NIFTY 50 index.</p>
+
+  <div class="nifty-grid">
+    <div class="nifty-box">
+      <h3>Index</h3>
+      <p>NIFTY 50</p>
+    </div>
+
+    <div class="nifty-box">
+      <h3>Companies</h3>
+      <p id="niftyCompanyCount">50</p>
+    </div>
+
+    <div class="nifty-box">
+      <h3>Data Type</h3>
+      <p>Historical CSV</p>
+    </div>
+  </div>
+</section>
+
+<section class="panel nifty-panel">
+  <h2>Company Search</h2>
+  <input
+    type="text"
+    id="niftySearch"
+    placeholder="Search company or ticker..."
+  >
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Company</th>
+          <th>Ticker</th>
+          <th>Latest Close</th>
+        </tr>
+      </thead>
+      <tbody id="niftyCompanyTable">
+        <tr>
+          <td colspan="3">Loading companies...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+<!-- End NIFTY 50 Additional Features -->
+    </main>
 <p>HTML IS WORKING</p>
   <script>
 window.onerror = function(message, source, line) {
